@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZK-Clipboard - Zero-Knowledge Secure Sync Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --panel-bg: rgba(21, 26, 36, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-glow: #00f0ff;
+            --accent-purple: #ab47bc;
+            --text-main: #f5f6f8;
+            --text-muted: #8b9bb4;
+            --success: #39ff14;
+            --danger: #ff3838;
+            --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 80% 20%, rgba(0, 240, 255, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 15% 85%, rgba(171, 71, 188, 0.08) 0%, transparent 45%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+        }
+
+        .glass-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            box-shadow: var(--glass-shadow);
+            padding: 2.5rem;
+            transition: border-color 0.4s, box-shadow 0.4s;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 16px 48px 0 rgba(0, 240, 255, 0.05);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.2rem;
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff 0%, var(--accent-glow) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+        }
+
+        /* Views */
+        .view-panel {
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .view-panel.active {
+            display: flex;
+        }
+
+        /* Form Inputs */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 1.1rem;
+            color: var(--text-muted);
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(10, 11, 16, 0.85);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-main);
+            padding: 1rem 1rem 1rem 2.8rem;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 10px 0 rgba(0, 240, 255, 0.15);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent-glow) 0%, var(--accent-purple) 100%);
+            border: none;
+            color: #0b0c10;
+            padding: 1.1rem;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.95;
+            box-shadow: 0 0 15px 0 rgba(0, 240, 255, 0.25);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* Dashboard Interface */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 0.9rem 1.25rem;
+        }
+
+        .room-badge {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .room-badge span {
+            color: var(--accent-glow);
+            font-weight: 700;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+        }
+
+        .status-dot.active {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-dot.syncing {
+            background-color: var(--accent-glow);
+            box-shadow: 0 0 8px var(--accent-glow);
+            animation: pulse 1s infinite alternate;
+        }
+
+        .status-dot.error {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        textarea {
+            width: 100%;
+            height: 250px;
+            background: rgba(10, 11, 16, 0.85);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            color: var(--text-main);
+            padding: 1.25rem;
+            font-size: 1rem;
+            outline: none;
+            resize: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 10px 0 rgba(0, 240, 255, 0.15);
+        }
+
+        .dashboard-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        /* Toggle Switch styling */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+        }
+
+        .toggle-wrapper span {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: rgba(0, 240, 255, 0.15);
+            border-color: var(--accent-glow);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: var(--accent-glow);
+            box-shadow: 0 0 6px var(--accent-glow);
+        }
+
+        .btn-action {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9rem;
+            border-radius: 10px;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: transparent;
+            border: 1px solid rgba(255, 56, 56, 0.3);
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 56, 56, 0.1);
+            box-shadow: 0 0 15px rgba(255, 56, 56, 0.15);
+        }
+
+        .sync-metadata {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card">
+            <div class="header">
+                <h1><i class="fa-solid fa-arrows-spin"></i> ZK-Clipboard</h1>
+                <p id="app-tagline">Zero-Knowledge Secure Clipboard Synchronization</p>
+            </div>
+
+            <!-- 1. Join / Setup Room View -->
+            <div id="panel-join" class="view-panel active">
+                <div class="form-group">
+                    <label for="room-input">Room Name</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-door-open"></i>
+                        <input type="text" id="room-input" placeholder="e.g. secure-clipboard-alpha" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password-input">Room Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="password" id="password-input" placeholder="Password to derive encryption keys" required>
+                    </div>
+                </div>
+
+                <button onclick="connectRoom()"><i class="fa-solid fa-circle-right"></i> Enter Sync Room</button>
+            </div>
+
+            <!-- 2. Dashboard View -->
+            <div id="panel-dash" class="view-panel">
+                <div class="dashboard-header">
+                    <div class="room-badge">
+                        <i class="fa-solid fa-lock"></i> Room: <span id="display-room-id">None</span>
+                    </div>
+                    <div class="status-indicator">
+                        <div class="status-dot" id="display-status-dot"></div>
+                        <span id="display-status-text">Disconnected</span>
+                    </div>
+                </div>
+
+                <textarea id="clipboard-textarea" placeholder="Type or paste text here. Changes sync automatically in real-time..." disabled></textarea>
+
+                <div class="sync-metadata">
+                    <span id="display-sync-state">Idle</span>
+                    <span id="display-last-synced">Last synced: Never</span>
+                </div>
+
+                <div class="dashboard-controls">
+                    <div class="toggle-wrapper" onclick="toggleAutoSync()">
+                        <label class="switch">
+                            <input type="checkbox" id="autosync-checkbox" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <span>Auto-Sync Polling</span>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn-action btn-secondary" onclick="copyText()"><i class="fa-solid fa-copy"></i> Copy</button>
+                        <button class="btn-action btn-danger" onclick="leaveRoom()"><i class="fa-solid fa-right-from-bracket"></i> Leave</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State variables
+        let appState = {
+            roomName: "",
+            encryptionKeyBytes: null,
+            verifierHash: "",
+            lastSyncedTime: null,
+            lastTextContent: "",
+            pollingTimer: null,
+            typingTimeout: null,
+            isPollingActive: true
+        };
+
+        // --- HELPER UTILITIES ---
+
+        function bufToHex(buffer) {
+            return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+        }
+
+        function hexToBuf(hex) {
+            const view = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < view.length; i++) {
+                view[i] = parseInt(hex.substr(i * 2, 2), 16);
+            }
+            return view.buffer;
+        }
+
+        function showPanel(panelId) {
+            document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+            document.getElementById(panelId).classList.add("active");
+        }
+
+        function updateStatusUI(status, label) {
+            const dot = document.getElementById("display-status-dot");
+            const text = document.getElementById("display-status-text");
+            dot.className = "status-dot " + status;
+            text.innerText = label;
+        }
+
+        // --- CRYPTOGRAPHIC HELPERS ---
+
+        async function deriveKeys(password, saltHex) {
+            const saltBytes = hexToBuf(saltHex);
+            const enc = new TextEncoder();
+            
+            // Import password as raw bits
+            const rawPasswordKey = await window.crypto.subtle.importKey(
+                "raw",
+                enc.encode(password),
+                { name: "PBKDF2" },
+                false,
+                ["deriveBits"]
+            );
+            
+            // Derive 64-byte key material (512 bits) using PBKDF2-HMAC-SHA256
+            const derivedBits = await window.crypto.subtle.deriveBits(
+                {
+                    name: "PBKDF2",
+                    salt: saltBytes,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                rawPasswordKey,
+                64 * 8
+            );
+            
+            const derivedBytes = new Uint8Array(derivedBits);
+            const encryptionKeyBytes = derivedBytes.slice(0, 32);
+            const verifierBytes = derivedBytes.slice(32, 64);
+            
+            return {
+                encryptionKeyBytes: encryptionKeyBytes,
+                verifierHash: bufToHex(verifierBytes.buffer)
+            };
+        }
+
+        async function encryptData(encryptionKeyBytes, plaintext) {
+            const cryptoKey = await window.crypto.subtle.importKey(
+                "raw",
+                encryptionKeyBytes,
+                { name: "AES-GCM" },
+                false,
+                ["encrypt"]
+            );
+            
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const ciphertextBuffer = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                cryptoKey,
+                new TextEncoder().encode(plaintext)
+            );
+            
+            const encryptedBytes = new Uint8Array(ciphertextBuffer);
+            const tagBytes = encryptedBytes.slice(-16);
+            const ciphertextBytes = encryptedBytes.slice(0, -16);
+            
+            return {
+                ciphertextHex: bufToHex(ciphertextBytes.buffer),
+                ivHex: bufToHex(iv.buffer),
+                tagHex: bufToHex(tagBytes.buffer)
+            };
+        }
+
+        async function decryptData(encryptionKeyBytes, ciphertextHex, ivHex, tagHex) {
+            const cryptoKey = await window.crypto.subtle.importKey(
+                "raw",
+                encryptionKeyBytes,
+                { name: "AES-GCM" },
+                false,
+                ["decrypt"]
+            );
+            
+            const ciphertextBytes = hexToBuf(ciphertextHex);
+            const ivBytes = hexToBuf(ivHex);
+            const tagBytes = hexToBuf(tagHex);
+            
+            const ciphertextWithTag = new Uint8Array(ciphertextBytes.byteLength + tagBytes.byteLength);
+            ciphertextWithTag.set(new Uint8Array(ciphertextBytes), 0);
+            ciphertextWithTag.set(new Uint8Array(tagBytes), ciphertextBytes.byteLength);
+            
+            const decryptedBuffer = await window.crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: new Uint8Array(ivBytes) },
+                cryptoKey,
+                ciphertextWithTag
+            );
+            
+            return new TextDecoder().decode(decryptedBuffer);
+        }
+
+        // --- HANDLERS & API WRAPPERS ---
+
+        async function connectRoom() {
+            const roomInput = document.getElementById("room-input").value.trim().toLowerCase();
+            const passwordInput = document.getElementById("password-input").value;
+
+            if (!roomInput || !passwordInput) {
+                alert("Room Name and Password are required.");
+                return;
+            }
+
+            appState.roomName = roomInput;
+
+            try {
+                // 1. Fetch or initialize salt
+                let saltHex = "";
+                const resSalt = await fetch(`/api/rooms/${roomInput}/salt`);
+                
+                if (resSalt.status === 200) {
+                    const dataSalt = await resSalt.json();
+                    saltHex = dataSalt.salt;
+                } else if (resSalt.status === 404) {
+                    // Room does not exist yet. Generate a random salt locally
+                    const randomSalt = window.crypto.getRandomValues(new Uint8Array(16));
+                    saltHex = bufToHex(randomSalt.buffer);
+                } else {
+                    alert("Error checking room state. Server might be offline.");
+                    return;
+                }
+
+                // 2. Derive cryptography keys (matching PBKDF2 parameters)
+                const derived = await deriveKeys(passwordInput, saltHex);
+                appState.encryptionKeyBytes = derived.encryptionKeyBytes;
+                appState.verifierHash = derived.verifierHash;
+
+                // 3. Create or join the sync room
+                const resCreate = await fetch("/api/rooms/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        room_id: roomInput,
+                        salt: saltHex,
+                        verifier_hash: derived.verifierHash
+                    })
+                });
+
+                if (resCreate.status === 200 || resCreate.status === 201) {
+                    // Success!
+                    document.getElementById("display-room-id").innerText = roomInput;
+                    document.getElementById("clipboard-textarea").removeAttribute("disabled");
+                    showPanel("panel-dash");
+                    updateStatusUI("active", "Connected");
+                    
+                    // Trigger initial clipboard pull
+                    pullClipboardSync();
+
+                    // Start auto polling
+                    startPolling();
+                } else if (resCreate.status === 401) {
+                    alert("Invalid room password. Verification hash mismatch.");
+                } else {
+                    const errData = await resCreate.json();
+                    alert("Error joining room: " + errData.error);
+                }
+            } catch (err) {
+                console.error("Connection failed:", err);
+                alert("Could not connect to the VPS sync server. Please verify connections.");
+            }
+        }
+
+        // --- SYNCHRONIZATION RUNNERS ---
+
+        async function pullClipboardSync() {
+            if (!appState.roomName) return;
+            
+            try {
+                const res = await fetch(`/api/rooms/${appState.roomName}/sync`);
+                if (res.status === 200) {
+                    const data = await res.json();
+                    const serverTime = data.updated_at;
+
+                    if (serverTime !== appState.lastSyncedTime) {
+                        const { ciphertext, iv, tag } = data;
+                        
+                        if (ciphertext && iv && tag) {
+                            const decrypted = await decryptData(
+                                appState.encryptionKeyBytes, 
+                                ciphertext, 
+                                iv, 
+                                tag
+                            );
+                            
+                            // Check if retrieved text matches active input.
+                            // If different, update UI text area.
+                            const tx = document.getElementById("clipboard-textarea");
+                            if (decrypted !== tx.value) {
+                                tx.value = decrypted;
+                                appState.lastTextContent = decrypted;
+                                document.getElementById("display-sync-state").innerText = "Synced from server";
+                            }
+                        }
+                        
+                        appState.lastSyncedTime = serverTime;
+                        document.getElementById("display-last-synced").innerText = "Last synced: " + new Date(serverTime).toLocaleTimeString();
+                    }
+                }
+            } catch (err) {
+                console.warn("Polling request failed:", err);
+                updateStatusUI("error", "Error connecting");
+            }
+        }
+
+        async function pushClipboardSync(textContent) {
+            if (!appState.roomName || textContent === appState.lastTextContent) return;
+
+            document.getElementById("display-sync-state").innerText = "Encrypting & pushing...";
+            updateStatusUI("syncing", "Syncing");
+
+            try {
+                const enc = await encryptData(appState.encryptionKeyBytes, textContent);
+                const res = await fetch(`/api/rooms/${appState.roomName}/sync`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        verifier_hash: appState.verifierHash,
+                        ciphertext: enc.ciphertextHex,
+                        iv: enc.ivHex,
+                        tag: enc.tagHex
+                    })
+                });
+
+                if (res.status === 200) {
+                    appState.lastTextContent = textContent;
+                    document.getElementById("display-sync-state").innerText = "Synced to server";
+                    updateStatusUI("active", "Connected");
+                    
+                    const data = await res.json();
+                    // Fetch state to sync timestamps
+                    pullClipboardSync();
+                } else {
+                    console.error("Upload failed status:", res.status);
+                    document.getElementById("display-sync-state").innerText = "Sync failed";
+                    updateStatusUI("error", "Sync Error");
+                }
+            } catch (err) {
+                console.error("Push payload error:", err);
+                document.getElementById("display-sync-state").innerText = "Connection error";
+                updateStatusUI("error", "Sync Error");
+            }
+        }
+
+        // --- INTERACTIVE TRIGGERS ---
+
+        // Debounce input to upload only when typing pauses
+        document.getElementById("clipboard-textarea").addEventListener("input", (e) => {
+            document.getElementById("display-sync-state").innerText = "Typing...";
+            
+            clearTimeout(appState.typingTimeout);
+            appState.typingTimeout = setTimeout(() => {
+                pushClipboardSync(e.target.value);
+            }, 600); // 600ms debounce delay
+        });
+
+        function startPolling() {
+            if (appState.pollingTimer) clearInterval(appState.pollingTimer);
+            if (appState.isPollingActive) {
+                appState.pollingTimer = setInterval(() => {
+                    pullClipboardSync();
+                }, 2000); // Poll every 2 seconds
+            }
+        }
+
+        function toggleAutoSync() {
+            const chk = document.getElementById("autosync-checkbox");
+            appState.isPollingActive = chk.checked;
+            
+            if (appState.isPollingActive) {
+                startPolling();
+                document.getElementById("display-sync-state").innerText = "Polling started";
+            } else {
+                if (appState.pollingTimer) clearInterval(appState.pollingTimer);
+                appState.pollingTimer = null;
+                document.getElementById("display-sync-state").innerText = "Polling paused";
+            }
+        }
+
+        function copyText() {
+            const tx = document.getElementById("clipboard-textarea");
+            navigator.clipboard.writeText(tx.value).then(() => {
+                const btn = document.querySelector(".btn-secondary");
+                btn.innerHTML = `<i class="fa-solid fa-check" style="color: var(--accent-glow);"></i> Copied`;
+                setTimeout(() => {
+                    btn.innerHTML = `<i class="fa-solid fa-copy"></i> Copy`;
+                }, 1500);
+            });
+        }
+
+        function leaveRoom() {
+            // Stop polling
+            if (appState.pollingTimer) clearInterval(appState.pollingTimer);
+            
+            // Clear credentials from state memory
+            appState.roomName = "";
+            appState.encryptionKeyBytes = null;
+            appState.verifierHash = "";
+            appState.lastTextContent = "";
+            appState.lastSyncedTime = null;
+
+            // Reset inputs & UI fields
+            document.getElementById("password-input").value = "";
+            const tx = document.getElementById("clipboard-textarea");
+            tx.value = "";
+            tx.setAttribute("disabled", "true");
+
+            showPanel("panel-join");
+        }
+    </script>
+</body>
+</html>
