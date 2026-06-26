@@ -2,6 +2,8 @@
 
 A secure, real-time clipboard sharing utility. It allows users to sync copy-paste buffers instantly across multiple machines. All data is encrypted client-side using **AES-256-GCM** before transmission, meaning the storage portal server only handles encrypted payloads and has zero visibility into your plaintext clipboard contents.
 
+🔗 **Live Demo:** [https://zk-clipboard-frontend.vercel.app](https://zk-clipboard-frontend.vercel.app)
+
 ---
 
 ## 🔒 The Zero-Knowledge Cryptographic Model
